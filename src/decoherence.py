@@ -2,20 +2,12 @@
 
 from __future__ import annotations
 
-from numbers import Integral
-
 import numpy as np
 from qiskit_aer import AerSimulator
 from qiskit_aer.noise import NoiseModel, thermal_relaxation_error
 
+from ._validation import validate_positive_integer
 from .zeno_circuit import build_zeno_circuit
-
-
-def _validate_shots(shots: int) -> None:
-    """Validate shot count used for simulator execution."""
-    if isinstance(shots, bool) or not isinstance(shots, Integral) or shots <= 0:
-        raise ValueError("shots must be a positive integer")
-
 
 def create_noise_model(t1: float, t2: float, gate_time: float) -> NoiseModel:
     """Create a thermal relaxation noise model for single-qubit operations."""
@@ -40,7 +32,7 @@ def run_zeno_with_noise(
     gate_time: float = 50e-9,
 ) -> dict[str, float]:
     """Compare ideal and noisy Zeno probabilities and return both."""
-    _validate_shots(shots)
+    validate_positive_integer(shots, "shots")
     circuit = build_zeno_circuit(n_steps, n_measurements, rotation_angle)
     ideal_result = AerSimulator().run(circuit, shots=shots).result().get_counts(circuit)
 

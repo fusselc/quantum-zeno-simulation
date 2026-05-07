@@ -2,18 +2,13 @@
 
 from __future__ import annotations
 
-from numbers import Integral
 from typing import Iterable, List
 
 import numpy as np
 from qiskit import QuantumCircuit
 from qiskit_aer import AerSimulator
 
-
-def _validate_shots(shots: int) -> None:
-    """Validate shot count used for simulator execution."""
-    if isinstance(shots, bool) or not isinstance(shots, Integral) or shots <= 0:
-        raise ValueError("shots must be a positive integer")
+from ._validation import validate_positive_integer
 
 
 def build_anti_zeno_circuit(
@@ -51,7 +46,7 @@ def run_anti_zeno(
     shots: int = 4096,
 ) -> float:
     """Run anti-Zeno circuit and return final P(|1>)."""
-    _validate_shots(shots)
+    validate_positive_integer(shots, "shots")
     circuit = build_anti_zeno_circuit(n_steps, measurement_positions, rotation_angle)
     result = AerSimulator().run(circuit, shots=shots).result()
     counts = result.get_counts(circuit)

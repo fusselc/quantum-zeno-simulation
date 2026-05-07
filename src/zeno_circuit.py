@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-from numbers import Integral
 from typing import Set
 
 import numpy as np
 from qiskit import QuantumCircuit
 from qiskit_aer import AerSimulator
+
+from ._validation import validate_positive_integer
 
 
 def _measurement_steps(n_steps: int, n_measurements: int) -> Set[int]:
@@ -17,12 +18,6 @@ def _measurement_steps(n_steps: int, n_measurements: int) -> Set[int]:
     capped = min(n_measurements, n_steps - 1)
     positions = np.linspace(1, n_steps - 1, capped, dtype=int)
     return set(int(pos) for pos in positions)
-
-
-def _validate_shots(shots: int) -> None:
-    """Validate shot count used for simulator execution."""
-    if isinstance(shots, bool) or not isinstance(shots, Integral) or shots <= 0:
-        raise ValueError("shots must be a positive integer")
 
 
 def build_zeno_circuit(
@@ -62,7 +57,7 @@ def run_zeno(
     rotation_angle: float = np.pi,
 ) -> float:
     """Execute the Zeno circuit and return final P(|1>)."""
-    _validate_shots(shots)
+    validate_positive_integer(shots, "shots")
     circuit = build_zeno_circuit(n_steps, n_measurements, rotation_angle)
     result = AerSimulator().run(circuit, shots=shots).result()
     counts = result.get_counts(circuit)
