@@ -18,3 +18,17 @@ def test_plot_rabi_vs_zeno(tmp_path):
 def test_plot_anti_zeno(tmp_path):
     out = plot_anti_zeno({"free": 1.0, "frequent": 0.2, "strategic": 0.6}, output_path=tmp_path / "anti.png")
     assert out.exists()
+
+
+def test_plot_anti_zeno_supports_more_than_three_categories(tmp_path):
+    out = plot_anti_zeno(
+        {
+            "free": 1.0,
+            "frequent": 0.2,
+            "strategic": 0.6,
+            "variant_a": 0.4,
+            "variant_b": 0.3,
+        },
+        output_path=tmp_path / "anti_many.png",
+    )
+    assert out.exists()

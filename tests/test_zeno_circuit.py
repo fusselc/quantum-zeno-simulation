@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 
 from src.zeno_circuit import build_zeno_circuit, run_zeno
 
@@ -15,3 +16,9 @@ def test_zeno_measurements_suppress_transition():
     assert free > 0.95
     assert suppressed < 0.05
     assert 0.0 <= suppressed <= 1.0
+
+
+@pytest.mark.parametrize("shots", [0, -1, 1.5, True])
+def test_run_zeno_rejects_invalid_shots(shots):
+    with pytest.raises(ValueError, match="shots must be a positive integer"):
+        run_zeno(n_steps=10, n_measurements=2, shots=shots)
