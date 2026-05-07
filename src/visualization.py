@@ -1,103 +1,75 @@
-"""Plotting utilities for Quantum Zeno experiments."""
+"""Plotting helpers for Quantum Zeno simulations."""
+
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Mapping, Sequence
 
 import matplotlib.pyplot as plt
 
 
-def _prepare_path(save_path: str) -> Path:
-    path = Path(save_path)
+def _save(fig: plt.Figure, output_path: str | Path) -> Path:
+    path = Path(output_path)
     path.parent.mkdir(parents=True, exist_ok=True)
+    fig.tight_layout()
+    fig.savefig(path, dpi=300)
     return path
 
 
 def plot_zeno_sweep(
-    measurement_counts: list[int],
-    probabilities: list[float],
-    save_path: str = "zeno_sweep.png",
-) -> None:
-    """Plot transition probability P(|1>) vs intermediate measurement count."""
-    path = _prepare_path(save_path)
-    fig, ax = plt.subplots(figsize=(8, 5))
-    ax.plot(measurement_counts, probabilities, "o-", linewidth=2, label="Measured evolution")
-    ax.set_xlabel("Number of Intermediate Measurements")
-    ax.set_ylabel("P(|1⟩) — Transition Probability")
-    ax.set_title("Quantum Zeno Effect")
-    ax.axhline(y=1.0, linestyle="--", alpha=0.5, label="Free π rotation")
-    ax.axhline(y=0.0, linestyle=":", alpha=0.5, label="Complete suppression")
-    ax.set_ylim(-0.05, 1.1)
+    measurement_counts: Sequence[int],
+    probabilities: Sequence[float],
+    output_path: str | Path = "zeno_sweep.png",
+) -> Path:
+    """Plot P(|1>) as a function of intermediate measurement count."""
+    fig, ax = plt.subplots(figsize=(7, 4.5))
+    ax.plot(measurement_counts, probabilities, "o-", label="Zeno sweep")
+    ax.set_xlabel("Number of intermediate measurements")
+    ax.set_ylabel("$P(|1\\rangle)$")
+    ax.set_title("Quantum Zeno suppression of transition")
+    ax.grid(alpha=0.25)
     ax.legend()
-    ax.grid(True, alpha=0.3)
-    plt.tight_layout()
-    plt.savefig(path, dpi=150)
+    path = _save(fig, output_path)
     plt.close(fig)
+    return path
 
 
 def plot_rabi_vs_zeno(
-    rabi_angles: list[float],
-    rabi_probs: list[float],
-    zeno_measurements: list[int],
-    zeno_probs: list[float],
-    save_path: str = "rabi_vs_zeno.png",
-) -> None:
-    """Create a side-by-side plot of free Rabi oscillation and Zeno suppression."""
-    path = _prepare_path(save_path)
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
-    ax1.plot(rabi_angles, rabi_probs, "-", linewidth=2)
-    ax1.set_xlabel("Rotation Angle (rad)")
-    ax1.set_ylabel("P(|1⟩)")
-    ax1.set_title("Free Rabi Oscillation")
-    ax1.grid(True, alpha=0.3)
-
-    ax2.plot(zeno_measurements, zeno_probs, "o-", linewidth=2)
-    ax2.set_xlabel("Number of Measurements")
-    ax2.set_ylabel("P(|1⟩)")
-    ax2.set_title("Zeno Suppression for π Rotation")
-    ax2.grid(True, alpha=0.3)
-
-    plt.tight_layout()
-    plt.savefig(path, dpi=150)
+    rabi_data: Mapping[str, Sequence[float]],
+    zeno_data: Mapping[str, Sequence[float]],
+    output_path: str | Path = "rabi_vs_zeno.png",
+) -> Path:
+    """Plot free Rabi evolution versus Zeno-suppressed evolution."""
+    fig, ax = plt.subplots(figsize=(7, 4.5))
+    ax.plot(rabi_data["x"], rabi_data["y"], "-", label="Rabi (no measurements)")
+    ax.plot(zeno_data["x"], zeno_data["y"], "o-", label="Zeno")
+    ax.set_xlabel("Control parameter")
+    ax.set_ylabel("$P(|1\\rangle)$")
+    ax.set_title("Rabi vs Quantum Zeno")
+    ax.grid(alpha=0.25)
+    ax.legend()
+    path = _save(fig, output_path)
     plt.close(fig)
+    return path
 
 
 def plot_anti_zeno(
-    data: dict[str, list[float] | list[str]],
-    save_path: str = "anti_zeno.png",
-) -> None:
-    """Plot the anti-Zeno-style measurement-placement comparison."""
-    path = _prepare_path(save_path)
-    labels = data["labels"]
-    probabilities = data["probabilities"]
-    fig, ax = plt.subplots(figsize=(8, 5))
-    ax.bar(labels, probabilities)
-    ax.set_xlabel("Measurement Strategy")
-    ax.set_ylabel("P(|1⟩)")
-    ax.set_title("Anti-Zeno-Style Measurement Placement")
-    ax.set_ylim(0, 1.05)
-    ax.grid(True, axis="y", alpha=0.3)
-    plt.tight_layout()
-    plt.savefig(path, dpi=150)
-    plt.close(fig)
+    data: Mapping[str, float],
+    output_path: str | Path = "anti_zeno.png",
+) -> Path:
+    """Plot anti-Zeno demonstration data."""
+    labels = list(data.keys())
+    values = [float(v) for v in data.values()]
+    cmap = plt.get_cmap("tab20")
+    colors = [cmap(i % cmap.N) for i in range(len(labels))]
 
-
-def plot_noisy_comparison(
-    measurement_counts: list[int],
-    ideal: list[float],
-    noisy: list[float],
-    save_path: str = "noisy_comparison.png",
-) -> None:
-    """Plot ideal vs noisy Zeno transition probabilities."""
-    path = _prepare_path(save_path)
-    fig, ax = plt.subplots(figsize=(8, 5))
-    ax.plot(measurement_counts, ideal, "o-", label="Ideal")
-    ax.plot(measurement_counts, noisy, "s--", label="Noisy (T1/T2)")
-    ax.set_xlabel("Number of Measurements")
-    ax.set_ylabel("P(|1⟩)")
-    ax.set_title("Zeno Effect: Ideal vs Decoherence")
-    ax.set_ylim(-0.05, 1.1)
-    ax.legend()
-    ax.grid(True, alpha=0.3)
-    plt.tight_layout()
-    plt.savefig(path, dpi=150)
+    fig, ax = plt.subplots(figsize=(7, 4.5))
+    bars = ax.bar(labels, values, color=colors)
+    ax.set_ylim(0, 1)
+    ax.set_ylabel("$P(|1\\rangle)$")
+    ax.set_title("Anti-Zeno effect demonstration")
+    for bar, value in zip(bars, values):
+        ax.text(bar.get_x() + bar.get_width() / 2, value + 0.02, f"{value:.3f}", ha="center")
+    path = _save(fig, output_path)
     plt.close(fig)
+    return path

@@ -1,78 +1,58 @@
-"""Anti-Zeno-style demonstration with strategically placed measurements.
+"""Anti-Zeno experiment utilities."""
 
-This module is educational rather than a full open-quantum-system derivation of
-the Anti-Zeno Effect. It contrasts reset-based Zeno suppression with mid-circuit
-measurements that do not reset the qubit, allowing projections into |1> to be
-preserved for the final readout.
-"""
 from __future__ import annotations
+
+from typing import Iterable, List
 
 import numpy as np
 from qiskit import QuantumCircuit
 from qiskit_aer import AerSimulator
 
+from ._validation import validate_positive_integer
+
 
 def build_anti_zeno_circuit(
     n_steps: int,
-    measurement_positions: list[int],
+    measurement_positions: Iterable[int],
     rotation_angle: float = np.pi,
 ) -> QuantumCircuit:
-    """Build a circuit with non-resetting measurements at selected step indices."""
+    """Build circuit with strategically placed projective measurements.
+
+    Measurements are placed only at selected steps and do not reset to |0>,
+    which can increase transition probability compared with frequent resets.
+    """
     if n_steps <= 0:
         raise ValueError("n_steps must be positive")
-    invalid = [pos for pos in measurement_positions if pos < 0 or pos >= n_steps]
-    if invalid:
-        raise ValueError(f"measurement positions out of range: {invalid}")
 
-    measurement_set = set(measurement_positions)
-    angle_per_step = rotation_angle / n_steps
-    qc = QuantumCircuit(1, 1, name="anti_zeno")
+    positions: List[int] = sorted({int(p) for p in measurement_positions if 1 <= int(p) < n_steps})
+    circuit = QuantumCircuit(1, len(positions) + 1)
+    step_angle = rotation_angle / float(n_steps)
 
-    for step in range(n_steps):
-        qc.ry(angle_per_step, 0)
-        if step in measurement_set:
-            qc.barrier()
-            qc.measure(0, 0)
+    c_idx = 0
+    for step in range(1, n_steps + 1):
+        circuit.ry(step_angle, 0)
+        if c_idx < len(positions) and step == positions[c_idx]:
+            circuit.measure(0, c_idx)
+            c_idx += 1
 
-    qc.barrier()
-    qc.measure(0, 0)
-    return qc
+    circuit.measure(0, c_idx)
+    return circuit
 
 
 def run_anti_zeno(
-    n_steps: int = 100,
-    measurement_positions: list[int] | None = None,
+    n_steps: int,
+    measurement_positions: Iterable[int],
     rotation_angle: float = np.pi,
     shots: int = 4096,
-    seed_simulator: int | None = 12345,
 ) -> float:
-    """Run the anti-Zeno-style experiment and return P(|1>)."""
-    if shots <= 0:
-        raise ValueError("shots must be positive")
-    if measurement_positions is None:
-        measurement_positions = [n_steps // 2]
+    """Run anti-Zeno circuit and return final P(|1>)."""
+    validate_positive_integer(shots, "shots")
     circuit = build_anti_zeno_circuit(n_steps, measurement_positions, rotation_angle)
-    simulator = AerSimulator(seed_simulator=seed_simulator)
-    result = simulator.run(circuit, shots=shots).result()
-    counts = result.get_counts()
-    return counts.get("1", 0) / shots
+    result = AerSimulator().run(circuit, shots=shots).result()
+    counts = result.get_counts(circuit)
 
-
-def anti_zeno_sweep(
-    n_steps: int = 100,
-    shots: int = 4096,
-) -> dict[str, list[float] | list[str]]:
-    """Compare several measurement-placement strategies."""
-    strategies: dict[str, list[int]] = {
-        "none": [],
-        "early": [n_steps // 4],
-        "midpoint": [n_steps // 2],
-        "late": [3 * n_steps // 4],
-        "quarter+mid": [n_steps // 4, n_steps // 2],
-    }
-    labels = list(strategies.keys())
-    probabilities = [
-        run_anti_zeno(n_steps, positions, shots=shots)
-        for positions in strategies.values()
-    ]
-    return {"labels": labels, "probabilities": probabilities}
+    p1 = 0.0
+    for bitstring, count in counts.items():
+        if bitstring[0] == "1":
+            p1 += count
+    return p1 / float(shots)

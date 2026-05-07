@@ -1,59 +1,50 @@
-"""Zeno effect with thermal-relaxation noise (T1/T2 decoherence)."""
+"""Noise-model utilities for decoherence studies."""
+
 from __future__ import annotations
 
 import numpy as np
 from qiskit_aer import AerSimulator
 from qiskit_aer.noise import NoiseModel, thermal_relaxation_error
 
-from .zeno_circuit import build_zeno_circuit, run_zeno
+from ._validation import validate_positive_integer
+from .zeno_circuit import build_zeno_circuit
 
-
-def create_noise_model(
-    t1: float = 50e-6,
-    t2: float = 30e-6,
-    gate_time: float = 50e-9,
-) -> NoiseModel:
-    """Create a one-qubit thermal-relaxation noise model.
-
-    Args:
-        t1: Energy relaxation time in seconds.
-        t2: Dephasing time in seconds. Must be <= 2*T1 for the Aer model.
-        gate_time: Approximate duration of each Ry/reset operation in seconds.
-    """
+def create_noise_model(t1: float, t2: float, gate_time: float) -> NoiseModel:
+    """Create a thermal relaxation noise model for single-qubit operations."""
     if t1 <= 0 or t2 <= 0 or gate_time <= 0:
-        raise ValueError("t1, t2, and gate_time must be positive")
+        raise ValueError("t1, t2, and gate_time must all be positive")
+
+    t2_eff = min(t2, 2 * t1)
+    error = thermal_relaxation_error(t1=t1, t2=t2_eff, time=gate_time)
+
     noise_model = NoiseModel()
-    error = thermal_relaxation_error(t1, t2, gate_time)
-    noise_model.add_all_qubit_quantum_error(error, ["ry", "reset"])
+    noise_model.add_all_qubit_quantum_error(error, ["ry", "id", "reset"])
     return noise_model
 
 
-def run_noisy_zeno(
+def run_zeno_with_noise(
     n_steps: int,
     n_measurements: int,
+    shots: int = 4096,
     rotation_angle: float = np.pi,
-    shots: int = 4096,
-    t1: float = 50e-6,
-    t2: float = 30e-6,
+    t1: float = 120e-6,
+    t2: float = 80e-6,
     gate_time: float = 50e-9,
-    seed_simulator: int | None = 12345,
-) -> float:
-    """Run the Zeno circuit with T1/T2 noise and return P(|1>)."""
+) -> dict[str, float]:
+    """Compare ideal and noisy Zeno probabilities and return both."""
+    validate_positive_integer(shots, "shots")
     circuit = build_zeno_circuit(n_steps, n_measurements, rotation_angle)
+    ideal_result = AerSimulator().run(circuit, shots=shots).result().get_counts(circuit)
+
     noise_model = create_noise_model(t1=t1, t2=t2, gate_time=gate_time)
-    simulator = AerSimulator(noise_model=noise_model, seed_simulator=seed_simulator)
-    result = simulator.run(circuit, shots=shots).result()
-    counts = result.get_counts()
-    return counts.get("1", 0) / shots
+    noisy_result = (
+        AerSimulator(noise_model=noise_model)
+        .run(circuit, shots=shots)
+        .result()
+        .get_counts(circuit)
+    )
 
+    def p1(counts: dict[str, int]) -> float:
+        return sum(v for k, v in counts.items() if k[0] == "1") / float(shots)
 
-def noisy_vs_ideal_sweep(
-    n_steps: int = 100,
-    max_measurements: int = 50,
-    shots: int = 4096,
-) -> dict[str, list[int] | list[float]]:
-    """Compare ideal and noisy Zeno sweeps."""
-    measurement_counts = list(range(0, max_measurements + 1, 5))
-    ideal = [run_zeno(n_steps, m, shots=shots) for m in measurement_counts]
-    noisy = [run_noisy_zeno(n_steps, m, shots=shots) for m in measurement_counts]
-    return {"measurement_counts": measurement_counts, "ideal": ideal, "noisy": noisy}
+    return {"ideal": p1(ideal_result), "noisy": p1(noisy_result)}

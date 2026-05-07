@@ -1,20 +1,32 @@
-"""Run ideal-vs-noisy Zeno comparison."""
-from src.decoherence import noisy_vs_ideal_sweep
-from src.visualization import plot_noisy_comparison
+"""Run noisy-vs-ideal Zeno comparison."""
 
+from __future__ import annotations
 
-def main() -> None:
-    """Execute ideal/noisy comparison and save a plot."""
-    print("Running Zeno sweep with and without T1/T2 decoherence...")
-    data = noisy_vs_ideal_sweep(n_steps=100, max_measurements=50, shots=4096)
-    print("
-Results:")
-    for m, ideal, noisy in zip(data["measurement_counts"], data["ideal"], data["noisy"]):
-        print(f"  {m:3d} measurements → ideal={ideal:.3f}, noisy={noisy:.3f}")
-    plot_noisy_comparison(data["measurement_counts"], data["ideal"], data["noisy"], "noisy_comparison.png")
-    print("
-Plot saved to noisy_comparison.png")
+import sys
+from pathlib import Path
+
+import numpy as np
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from src.decoherence import run_zeno_with_noise
+from src.visualization import plot_rabi_vs_zeno
 
 
 if __name__ == "__main__":
-    main()
+    n_steps = 40
+    measurement_counts = [0, 2, 5, 10, 20, 30]
+
+    ideal = []
+    noisy = []
+    for m in measurement_counts:
+        result = run_zeno_with_noise(n_steps=n_steps, n_measurements=m, rotation_angle=np.pi, shots=4096)
+        ideal.append(result["ideal"])
+        noisy.append(result["noisy"])
+
+    output = plot_rabi_vs_zeno(
+        {"x": measurement_counts, "y": ideal},
+        {"x": measurement_counts, "y": noisy},
+        output_path="experiments/decoherence_comparison.png",
+    )
+    print(f"Saved {output}")

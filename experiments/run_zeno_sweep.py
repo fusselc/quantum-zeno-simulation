@@ -1,22 +1,21 @@
-"""Run the main Quantum Zeno Effect sweep."""
-from src.zeno_circuit import zeno_sweep
+"""Run a measurement-frequency sweep for the Quantum Zeno effect."""
+
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+import numpy as np
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 from src.visualization import plot_zeno_sweep
-
-
-def main() -> None:
-    """Execute the Zeno sweep and save a plot."""
-    print("Running Quantum Zeno Effect sweep...")
-    print("Sweeping 0 to 50 intermediate measurements: 100 rotation steps, π total")
-    measurement_counts, probabilities = zeno_sweep(n_steps=100, max_measurements=50, shots=4096)
-    print("
-Results:")
-    for measurements, probability in zip(measurement_counts, probabilities):
-        bar = "█" * int(probability * 40)
-        print(f"  {measurements:3d} measurements → P(|1⟩) = {probability:.3f} {bar}")
-    plot_zeno_sweep(measurement_counts, probabilities, save_path="zeno_sweep.png")
-    print("
-Plot saved to zeno_sweep.png")
+from src.zeno_circuit import run_zeno
 
 
 if __name__ == "__main__":
-    main()
+    n_steps = 50
+    measurement_counts = list(range(0, 51))
+    probabilities = [run_zeno(n_steps=n_steps, n_measurements=m, shots=4096, rotation_angle=np.pi) for m in measurement_counts]
+    output = plot_zeno_sweep(measurement_counts, probabilities, output_path="experiments/zeno_sweep.png")
+    print(f"Saved {output}")

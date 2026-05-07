@@ -1,20 +1,23 @@
-from src.anti_zeno import build_anti_zeno_circuit, run_anti_zeno, anti_zeno_sweep
+import numpy as np
+import pytest
 
-
-def test_anti_zeno_circuit_contains_measurement():
-    qc = build_anti_zeno_circuit(20, [10])
-    ops = [inst.operation.name for inst in qc.data]
-    assert "measure" in ops
-    assert "reset" not in ops
+from src.anti_zeno import run_anti_zeno
+from src.zeno_circuit import run_zeno
 
 
 def test_anti_zeno_probability_bounds():
-    p = run_anti_zeno(n_steps=50, measurement_positions=[25], shots=1024)
+    p = run_anti_zeno(n_steps=40, measurement_positions=[30, 34, 37], rotation_angle=np.pi, shots=3000)
     assert 0.0 <= p <= 1.0
 
 
-def test_anti_zeno_sweep_shape():
-    data = anti_zeno_sweep(n_steps=40, shots=256)
-    assert "labels" in data
-    assert "probabilities" in data
-    assert len(data["labels"]) == len(data["probabilities"])
+def test_strategic_measurements_exceed_frequent_zeno():
+    strategic = run_anti_zeno(n_steps=40, measurement_positions=[30, 34, 37], rotation_angle=np.pi, shots=4000)
+    frequent = run_zeno(n_steps=40, n_measurements=20, rotation_angle=np.pi, shots=4000)
+    assert strategic > 0.7
+    assert frequent < 0.05
+
+
+@pytest.mark.parametrize("shots", [0, -1, 1.5, True])
+def test_run_anti_zeno_rejects_invalid_shots(shots):
+    with pytest.raises(ValueError, match="shots must be a positive integer"):
+        run_anti_zeno(n_steps=10, measurement_positions=[2], shots=shots)

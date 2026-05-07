@@ -1,18 +1,38 @@
-"""Run the anti-Zeno-style measurement-placement experiment."""
-from src.anti_zeno import anti_zeno_sweep
+"""Run a simple anti-Zeno comparison experiment."""
+
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+import numpy as np
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from src.anti_zeno import run_anti_zeno
 from src.visualization import plot_anti_zeno
-
-
-def main() -> None:
-    """Execute anti-Zeno-style sweep and save a plot."""
-    print("Running Anti-Zeno-style measurement-placement comparison...")
-    data = anti_zeno_sweep(n_steps=100, shots=4096)
-    for label, probability in zip(data["labels"], data["probabilities"]):
-        print(f"  {label:>11s} → P(|1⟩) = {probability:.3f}")
-    plot_anti_zeno(data, save_path="anti_zeno.png")
-    print("
-Plot saved to anti_zeno.png")
+from src.zeno_circuit import run_zeno
 
 
 if __name__ == "__main__":
-    main()
+    n_steps = 40
+    shots = 4096
+
+    free = run_anti_zeno(n_steps=n_steps, measurement_positions=[], rotation_angle=np.pi, shots=shots)
+    frequent_reset = run_zeno(n_steps=n_steps, n_measurements=20, rotation_angle=np.pi, shots=shots)
+    strategic = run_anti_zeno(
+        n_steps=n_steps,
+        measurement_positions=[30, 34, 37],
+        rotation_angle=np.pi,
+        shots=shots,
+    )
+
+    output = plot_anti_zeno(
+        {
+            "Free": free,
+            "Frequent Zeno": frequent_reset,
+            "Strategic (Anti-Zeno)": strategic,
+        },
+        output_path="experiments/anti_zeno.png",
+    )
+    print(f"Saved {output}")
