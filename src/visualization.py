@@ -62,7 +62,9 @@ def plot_anti_zeno(
     values = [float(v) for v in data.values()]
 
     fig, ax = plt.subplots(figsize=(7, 4.5))
-    bars = ax.bar(labels, values, color=["#1f77b4", "#ff7f0e", "#2ca02c"][: len(labels)])
+    cmap = plt.get_cmap("tab10")
+    colors = [cmap(i % cmap.N) for i in range(len(labels))]
+    bars = ax.bar(labels, values, color=colors)
     ax.set_ylim(0, 1)
     ax.set_ylabel("$P(|1\\rangle)$")
     ax.set_title("Anti-Zeno effect demonstration")
