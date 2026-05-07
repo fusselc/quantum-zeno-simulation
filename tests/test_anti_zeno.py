@@ -12,4 +12,5 @@ def test_anti_zeno_probability_bounds():
 def test_strategic_measurements_exceed_frequent_zeno():
     strategic = run_anti_zeno(n_steps=40, measurement_positions=[30, 34, 37], rotation_angle=np.pi, shots=4000)
     frequent = run_zeno(n_steps=40, n_measurements=20, rotation_angle=np.pi, shots=4000)
-    assert strategic > frequent
+    assert strategic > 0.7
+    assert frequent < 0.05

@@ -12,5 +12,6 @@ def test_build_zeno_circuit_classical_bits():
 def test_zeno_measurements_suppress_transition():
     free = run_zeno(n_steps=40, n_measurements=0, rotation_angle=np.pi, shots=4000)
     suppressed = run_zeno(n_steps=40, n_measurements=20, rotation_angle=np.pi, shots=4000)
-    assert free > suppressed
+    assert free > 0.95
+    assert suppressed < 0.05
     assert 0.0 <= suppressed <= 1.0

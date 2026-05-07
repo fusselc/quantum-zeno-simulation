@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Iterable, Mapping, Sequence
+from typing import Mapping, Sequence
 
 import matplotlib.pyplot as plt
 
@@ -54,7 +54,7 @@ def plot_rabi_vs_zeno(
 
 
 def plot_anti_zeno(
-    data: Mapping[str, Iterable[float]],
+    data: Mapping[str, float],
     output_path: str | Path = "anti_zeno.png",
 ) -> Path:
     """Plot anti-Zeno demonstration data."""
